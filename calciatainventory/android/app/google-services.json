@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "353236379568",
+    "project_id": "calciatainventory-2416e",
+    "storage_bucket": "calciatainventory-2416e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:353236379568:android:8b75a75428c44b3f4f1875",
+        "android_client_info": {
+          "package_name": "com.example.calciatainventory"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJyDDOIBIAh3S3g1vMqU7M644gcO48l3k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
