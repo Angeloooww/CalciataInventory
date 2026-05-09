@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'admin/dashboard.dart';
+import 'staff/staff_dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,18 +13,19 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
+  final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  bool _isLoading = false;
-  bool _obscurePassword = true;
+  bool    _isLoading       = false;
+  bool    _obscurePassword = true;
   String? _errorMessage;
+  String  _selectedRole    = 'staff'; // default selection
 
-  // ── Coffee brand colors ──────────────────────────────────────────────────────
+  // ── Coffee brand colors ──────────────────────────────────────────────────
   static const Color _coffeeBrown = Color(0xFFB07040);
-  static const Color _cardGray = Color(0xFFF0F0F0);
-  static const Color _borderGray = Color(0xFFCCCCCC);
+  static const Color _cardGray    = Color(0xFFF0F0F0);
+  static const Color _borderGray  = Color(0xFFCCCCCC);
 
   @override
   void dispose() {
@@ -29,25 +34,67 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // ── Firebase sign-in ─────────────────────────────────────────────────────────
+  // ── Firebase sign-in + role verification ────────────────────────────────
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = true;
+      _isLoading    = true;
       _errorMessage = null;
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
+      // 1. Authenticate with Firebase
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email:    _emailController.text.trim(),
         password: _passwordController.text,
       );
-      // Navigation is handled by your auth state listener (see main.dart).
+
+      // 2. Fetch role from Firestore
+      final uid = credential.user!.uid;
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (!doc.exists) {
+        await FirebaseAuth.instance.signOut();
+        setState(() => _errorMessage =
+            'Account not found in the system. Contact your administrator.');
+        return;
+      }
+
+      final role = doc.data()?['role'] as String?;
+
+      // 3. Verify selected role matches Firestore role
+      if (role != _selectedRole) {
+        await FirebaseAuth.instance.signOut();
+        setState(() => _errorMessage =
+            'This account is not registered as ${_selectedRole == 'admin' ? 'an Admin' : 'a Staff'}. Please select the correct role.');
+        return;
+      }
+
+      if (!mounted) return;
+
+      // 4. Navigate based on verified role
+      if (role == 'admin') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DashboardPage()),
+        );
+      } else if (role == 'staff') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+        );
+      } else {
+        await FirebaseAuth.instance.signOut();
+        setState(() => _errorMessage =
+            'Your account has no assigned role. Contact your administrator.');
+      }
+
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMessage = _friendlyError(e.code);
-      });
+      setState(() => _errorMessage = _friendlyError(e.code));
+    } catch (e) {
+      setState(() => _errorMessage = 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -55,28 +102,23 @@ class _LoginPageState extends State<LoginPage> {
 
   String _friendlyError(String code) {
     switch (code) {
-      case 'user-not-found':
-        return 'No account found with that email.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please wait and try again.';
-      default:
-        return 'Sign-in failed. Please check your credentials.';
+      case 'user-not-found':    return 'No account found with that email.';
+      case 'wrong-password':    return 'Incorrect password. Please try again.';
+      case 'invalid-email':     return 'Please enter a valid email address.';
+      case 'user-disabled':     return 'This account has been disabled.';
+      case 'too-many-requests': return 'Too many attempts. Please wait and try again.';
+      default:                  return 'Sign-in failed. Please check your credentials.';
     }
   }
 
-  // ── Forgot password ───────────────────────────────────────────────────────────
+  // ── Forgot password ──────────────────────────────────────────────────────
   Future<void> _forgotPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Enter your email first, then tap Forgot password.')),
+          content: Text('Enter your email first, then tap Forgot password.'),
+        ),
       );
       return;
     }
@@ -94,7 +136,42 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────────
+  // ── Role selector widget ─────────────────────────────────────────────────
+  Widget _buildRoleSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _borderGray),
+      ),
+      child: Row(
+        children: [
+          _RoleButton(
+            label: 'Admin',
+            icon: Icons.admin_panel_settings_outlined,
+            isSelected: _selectedRole == 'admin',
+            onTap: () => setState(() {
+              _selectedRole = 'admin';
+              _errorMessage = null;
+            }),
+            activeColor: _coffeeBrown,
+          ),
+          _RoleButton(
+            label: 'Staff',
+            icon: Icons.badge_outlined,
+            isSelected: _selectedRole == 'staff',
+            onTap: () => setState(() {
+              _selectedRole = 'staff';
+              _errorMessage = null;
+            }),
+            activeColor: _coffeeBrown,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -121,7 +198,8 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Logo ──────────────────────────────────────────────────
+
+                  // ── Logo ────────────────────────────────────────────────
                   SizedBox(
                     width: 150,
                     height: 150,
@@ -145,7 +223,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Headline ──────────────────────────────────────────────
+                  // ── Headline ─────────────────────────────────────────────
                   const Text(
                     'Welcome to BeanStock!',
                     style: TextStyle(
@@ -164,10 +242,14 @@ class _LoginPageState extends State<LoginPage> {
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
 
-                  // ── Email field ───────────────────────────────────────────
-                  _FieldLabel(text: 'Email'),
+                  // ── Role selector ────────────────────────────────────────
+                  _buildRoleSelector(),
+                  const SizedBox(height: 28),
+
+                  // ── Email field ──────────────────────────────────────────
+                  const _FieldLabel(text: 'Email'),
                   const SizedBox(height: 6),
                   TextFormField(
                     controller: _emailController,
@@ -176,17 +258,15 @@ class _LoginPageState extends State<LoginPage> {
                     style: const TextStyle(fontSize: 14, color: Colors.black87),
                     decoration: _inputDecoration('Enter your email'),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Email is required';
-                      }
+                      if (v == null || v.trim().isEmpty) return 'Email is required';
                       if (!v.contains('@')) return 'Enter a valid email';
                       return null;
                     },
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Password field ────────────────────────────────────────
-                  _FieldLabel(text: 'Password'),
+                  // ── Password field ───────────────────────────────────────
+                  const _FieldLabel(text: 'Password'),
                   const SizedBox(height: 6),
                   TextFormField(
                     controller: _passwordController,
@@ -214,7 +294,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                   ),
 
-                  // ── Forgot password ───────────────────────────────────────
+                  // ── Forgot password ──────────────────────────────────────
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -229,7 +309,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 6),
 
-                  // ── Error message ─────────────────────────────────────────
+                  // ── Error message ────────────────────────────────────────
                   if (_errorMessage != null) ...[
                     Container(
                       width: double.infinity,
@@ -242,14 +322,14 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: Text(
                         _errorMessage!,
-                        style:
-                            TextStyle(color: Colors.red.shade700, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.red.shade700, fontSize: 13),
                       ),
                     ),
                     const SizedBox(height: 16),
                   ],
 
-                  // ── Sign-in button ────────────────────────────────────────
+                  // ── Sign-in button ───────────────────────────────────────
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -258,8 +338,7 @@ class _LoginPageState extends State<LoginPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _coffeeBrown,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                            _coffeeBrown.withOpacity(0.6),
+                        disabledBackgroundColor: _coffeeBrown.withOpacity(0.6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -278,9 +357,12 @@ class _LoginPageState extends State<LoginPage> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Sign in'),
+                          : Text(
+                              'Sign in as ${_selectedRole == 'admin' ? 'Admin' : 'Staff'}',
+                            ),
                     ),
                   ),
+
                 ],
               ),
             ),
@@ -322,7 +404,61 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// ── Small helper widget for field labels ──────────────────────────────────────
+// ── Role toggle button ───────────────────────────────────────────────────────
+class _RoleButton extends StatelessWidget {
+  const _RoleButton({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.activeColor,
+  });
+
+  final String   label;
+  final IconData icon;
+  final bool     isSelected;
+  final VoidCallback onTap;
+  final Color    activeColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected ? Colors.white : Colors.black45,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : Colors.black45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Field label helper ───────────────────────────────────────────────────────
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel({required this.text});
   final String text;
