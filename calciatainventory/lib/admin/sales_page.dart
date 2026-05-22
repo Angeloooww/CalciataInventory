@@ -87,7 +87,6 @@ class _SalesSidebar extends StatelessWidget {
     {'icon': Icons.inventory_2_rounded, 'label': 'Inventory'},
     {'icon': Icons.bar_chart_rounded, 'label': 'Sales'},
     {'icon': Icons.people_rounded, 'label': 'Staff'},
-    {'icon': Icons.settings_rounded, 'label': 'Settings'},
   ];
 
   @override
@@ -242,8 +241,6 @@ class _SalesBottomNav extends StatelessWidget {
             icon: Icon(Icons.bar_chart_rounded), label: 'Sales'),
         BottomNavigationBarItem(
             icon: Icon(Icons.people_rounded), label: 'Staff'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded), label: 'Settings'),
       ],
     );
   }

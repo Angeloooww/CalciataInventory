@@ -46,9 +46,6 @@ class _MenuPageState extends State<MenuPage> {
       case 4: // Staff — uncomment when ready
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StaffPage()));
         break;
-      case 5: // Settings — uncomment when ready
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-        break;
     }
   }
 
@@ -94,7 +91,6 @@ class _Sidebar extends StatelessWidget {
     _NavItem(icon: Icons.inventory_2_rounded, label: 'Inventory'),
     _NavItem(icon: Icons.bar_chart_rounded, label: 'Sales'),
     _NavItem(icon: Icons.people_rounded, label: 'Staff'),
-    _NavItem(icon: Icons.settings_rounded, label: 'Settings'),
   ];
 
   @override
@@ -245,8 +241,6 @@ class _BottomNav extends StatelessWidget {
           icon: Icon(Icons.bar_chart_rounded), label: 'Sales'),
       BottomNavigationBarItem(
           icon: Icon(Icons.people_rounded), label: 'Staff'),
-      BottomNavigationBarItem(
-          icon: Icon(Icons.settings_rounded), label: 'Settings'),
     ];
     return BottomNavigationBar(
       currentIndex: selectedIndex,
