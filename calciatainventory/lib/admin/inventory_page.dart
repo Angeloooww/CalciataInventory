@@ -43,9 +43,6 @@ class _InventoryPageState extends State<InventoryPage> {
       case 4:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StaffPage()));
         break;
-      case 5:
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-        break;
     }
   }
 
@@ -86,7 +83,6 @@ class _InvSidebar extends StatelessWidget {
     {'icon': Icons.inventory_2_rounded, 'label': 'Inventory'},
     {'icon': Icons.bar_chart_rounded, 'label': 'Sales'},
     {'icon': Icons.people_rounded, 'label': 'Staff'},
-    {'icon': Icons.settings_rounded, 'label': 'Settings'},
   ];
 
   @override
@@ -219,8 +215,6 @@ class _InvBottomNav extends StatelessWidget {
           icon: Icon(Icons.bar_chart_rounded), label: 'Sales'),
       BottomNavigationBarItem(
           icon: Icon(Icons.people_rounded), label: 'Staff'),
-      BottomNavigationBarItem(
-          icon: Icon(Icons.settings_rounded), label: 'Settings'),
     ];
     return BottomNavigationBar(
       currentIndex: selectedIndex,
