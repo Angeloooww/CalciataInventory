@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'staff_menu_page.dart';
+import '../login_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // StaffInventoryPage
@@ -209,7 +210,50 @@ class _StaffInvTopBar extends StatelessWidget {
   final String userName;
 
   Future<void> _signOut(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout, size: 20, color: Color(0xFF8B5E3C)),
+            SizedBox(width: 8),
+            Text('Sign Out',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to sign out?',
+          style: TextStyle(fontSize: 14, color: Colors.black54),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: Colors.black45, fontSize: 13)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8B5E3C),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Sign Out', style: TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
     await FirebaseAuth.instance.signOut();
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -302,11 +346,19 @@ class _StaffInventoryContentState extends State<_StaffInventoryContent> {
   CollectionReference get _inventoryRef =>
       FirebaseFirestore.instance.collection('inventory_items');
 
+  void _showAddIngredient() {
+    showDialog(
+      context: context,
+      builder: (_) => const _StaffIngredientDialog(),
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
+
 
   Future<void> _saveChanges() async {
     if (_isSaving) return;
@@ -429,6 +481,22 @@ class _StaffInventoryContentState extends State<_StaffInventoryContent> {
                   backgroundColor: _green,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: _green.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  elevation: 0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: _showAddIngredient,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Ingredient',
+                    style: TextStyle(fontSize: 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _brown,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
                   padding: const EdgeInsets.symmetric(
@@ -955,4 +1023,464 @@ class _StaffQtyButton extends StatelessWidget {
       ),
     );
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Add Ingredient Dialog — identical to admin version
+// ═══════════════════════════════════════════════════════════════════════════════
+class _StaffIngredientDialog extends StatefulWidget {
+  const _StaffIngredientDialog();
+
+  @override
+  State<_StaffIngredientDialog> createState() =>
+      _StaffIngredientDialogState();
+}
+
+class _StaffIngredientDialogState extends State<_StaffIngredientDialog> {
+  static const Color _brown = Color(0xFF8B5E3C);
+  static const Color _borderGray = Color(0xFFD9D9D9);
+
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _qtyCtrl = TextEditingController();
+  final _minQtyCtrl = TextEditingController();
+  final _criticalAtCtrl = TextEditingController(text: '3');
+  final _lowAtCtrl = TextEditingController(text: '6');
+
+  String _category = 'Dairy';
+  String _unit = 'liters';
+  bool _isSaving = false;
+
+  static const List<String> _categories = [
+    'Dairy',
+    'Powder',
+    'Syrups',
+    'Beans & Grounds',
+    'Cups & Packaging',
+    'Sweeteners',
+    'Other',
+  ];
+
+  static const List<String> _units = [
+    'liters',
+    'ml',
+    'kg',
+    'g',
+    'cans',
+    'pcs',
+    'packs',
+    'bottles',
+    'bags',
+    'boxes',
+  ];
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _qtyCtrl.dispose();
+    _minQtyCtrl.dispose();
+    _criticalAtCtrl.dispose();
+    _lowAtCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isSaving = true);
+    try {
+      await FirebaseFirestore.instance.collection('inventory_items').add({
+        'name': _nameCtrl.text.trim(),
+        'category': _category,
+        'unit': _unit,
+        'quantity': num.tryParse(_qtyCtrl.text) ?? 0,
+        'min_qty': num.tryParse(_minQtyCtrl.text),
+        'critical_at': num.tryParse(_criticalAtCtrl.text) ?? 3,
+        'low_at': num.tryParse(_lowAtCtrl.text) ?? 6,
+        'updated_at': FieldValue.serverTimestamp(),
+        'created_at': FieldValue.serverTimestamp(),
+      });
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Failed to add: $e')),
+            ]),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Title bar ──────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF5F5F5),
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(14)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Add Ingredient',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87)),
+                    IconButton(
+                      icon: const Icon(Icons.close,
+                          size: 18, color: Colors.black45),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Form ───────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name
+                      _label('Ingredient Name *'),
+                      const SizedBox(height: 6),
+                      _field(_nameCtrl, 'e.g. Oat Milk',
+                          validator: (v) => v!.trim().isEmpty
+                              ? 'Name is required'
+                              : null),
+                      const SizedBox(height: 14),
+
+                      // Category + Unit
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                _label('Category *'),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String>(
+                                  value: _category,
+                                  decoration: _inputDec(''),
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black87),
+                                  items: _categories
+                                      .map((c) => DropdownMenuItem(
+                                          value: c, child: Text(c)))
+                                      .toList(),
+                                  onChanged: (v) =>
+                                      setState(() => _category = v!),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                _label('Unit *'),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String>(
+                                  value: _unit,
+                                  decoration: _inputDec(''),
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black87),
+                                  items: _units
+                                      .map((u) => DropdownMenuItem(
+                                          value: u, child: Text(u)))
+                                      .toList(),
+                                  onChanged: (v) =>
+                                      setState(() => _unit = v!),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Current qty + min qty
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                _label('Current Quantity *'),
+                                const SizedBox(height: 6),
+                                _field(_qtyCtrl, 'e.g. 10',
+                                    keyboardType: TextInputType.number,
+                                    validator: (v) => v!.trim().isEmpty
+                                        ? 'Required'
+                                        : null),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                _label('Minimum Quantity'),
+                                const SizedBox(height: 6),
+                                _field(_minQtyCtrl, 'e.g. 5',
+                                    keyboardType: TextInputType.number),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Alert thresholds
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF8F0),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: const Color(0xFFFFE0B2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.notifications_outlined,
+                                    size: 15,
+                                    color: Color(0xFFF57C00)),
+                                SizedBox(width: 6),
+                                Text('Alert Thresholds',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFF57C00))),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Set when to trigger Critical and Low Stock alerts',
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.black45),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(children: [
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration:
+                                              const BoxDecoration(
+                                            color: Color(0xFFE53935),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        const Text('Critical at',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight:
+                                                    FontWeight.w500,
+                                                color:
+                                                    Colors.black54)),
+                                      ]),
+                                      const SizedBox(height: 5),
+                                      _field(_criticalAtCtrl, '3',
+                                          keyboardType:
+                                              TextInputType.number,
+                                          validator: (v) =>
+                                              v!.trim().isEmpty
+                                                  ? 'Required'
+                                                  : null),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(children: [
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration:
+                                              const BoxDecoration(
+                                            color: Color(0xFFF57C00),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        const Text('Low Stock at',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight:
+                                                    FontWeight.w500,
+                                                color:
+                                                    Colors.black54)),
+                                      ]),
+                                      const SizedBox(height: 5),
+                                      _field(_lowAtCtrl, '6',
+                                          keyboardType:
+                                              TextInputType.number,
+                                          validator: (v) =>
+                                              v!.trim().isEmpty
+                                                  ? 'Required'
+                                                  : null),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _isSaving ? null : _save,
+                                icon: _isSaving
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white))
+                                    : const Icon(Icons.check, size: 16),
+                                label: Text(
+                                  _isSaving
+                                      ? 'Saving...'
+                                      : 'Add Ingredient',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _brown,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            height: 44,
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.black54,
+                                side: const BorderSide(
+                                    color: _borderGray),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(8)),
+                              ),
+                              child: const Text('Cancel',
+                                  style: TextStyle(fontSize: 13)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _label(String text) => Text(text,
+      style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Colors.black87));
+
+  InputDecoration _inputDec(String hint) => InputDecoration(
+        hintText: hint,
+        hintStyle:
+            const TextStyle(fontSize: 13, color: Colors.black38),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: _borderGray)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: _borderGray)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide:
+                const BorderSide(color: _brown, width: 1.5)),
+        errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.red.shade300)),
+      );
+
+  Widget _field(
+    TextEditingController ctrl,
+    String hint, {
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) =>
+      TextFormField(
+        controller: ctrl,
+        keyboardType: keyboardType,
+        style: const TextStyle(fontSize: 13, color: Colors.black87),
+        decoration: _inputDec(hint),
+        validator: validator,
+      );
 }
