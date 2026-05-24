@@ -88,7 +88,6 @@ class _StaffSidebar extends StatelessWidget {
     {'icon': Icons.inventory_2_rounded, 'label': 'Inventory'},
     {'icon': Icons.bar_chart_rounded, 'label': 'Sales'},
     {'icon': Icons.people_rounded, 'label': 'Staff'},
-    {'icon': Icons.settings_rounded, 'label': 'Settings'},
   ];
 
   @override
@@ -228,8 +227,6 @@ class _StaffBottomNav extends StatelessWidget {
             icon: Icon(Icons.bar_chart_rounded), label: 'Sales'),
         BottomNavigationBarItem(
             icon: Icon(Icons.people_rounded), label: 'Staff'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded), label: 'Settings'),
       ],
     );
   }
@@ -296,27 +293,7 @@ class _StaffTopBar extends StatelessWidget {
       child: Row(
         children: [
           const Spacer(),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_outlined,
-                  size: 22, color: Colors.black54),
-              Positioned(
-                top: -4,
-                right: -4,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: const BoxDecoration(
-                      color: Color(0xFFE53935), shape: BoxShape.circle),
-                  child: const Center(
-                      child: Text('0',
-                          style: TextStyle(
-                              color: Colors.white, fontSize: 8))),
-                ),
-              ),
-            ],
-          ),
+         
           const SizedBox(width: 16),
           PopupMenuButton<String>(
             onSelected: (v) {

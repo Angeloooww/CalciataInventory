@@ -97,7 +97,6 @@ class _Sidebar extends StatelessWidget {
     _NavItem(icon: Icons.inventory_2_rounded, label: 'Inventory'),
     _NavItem(icon: Icons.bar_chart_rounded, label: 'Sales'),
     _NavItem(icon: Icons.people_rounded, label: 'Staff'),
-    _NavItem(icon: Icons.settings_rounded, label: 'Settings'),
   ];
 
   @override
@@ -310,28 +309,6 @@ class _TopBar extends StatelessWidget {
         children: [
           const Spacer(),
           // Notification bell — shows real critical inventory count
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_outlined,
-                  size: 22, color: Colors.black54),
-              if (criticalCount > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: const BoxDecoration(
-                        color: Color(0xFFE53935), shape: BoxShape.circle),
-                    child: Center(
-                        child: Text('$criticalCount',
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 9))),
-                  ),
-                ),
-            ],
-          ),
           const SizedBox(width: 16),
           PopupMenuButton<String>(
             onSelected: (v) {

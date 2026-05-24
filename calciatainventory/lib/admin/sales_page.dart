@@ -88,7 +88,6 @@ class _SalesSidebar extends StatelessWidget {
     {'icon': Icons.inventory_2_rounded, 'label': 'Inventory'},
     {'icon': Icons.bar_chart_rounded, 'label': 'Sales'},
     {'icon': Icons.people_rounded, 'label': 'Staff'},
-    {'icon': Icons.settings_rounded, 'label': 'Settings'},
   ];
 
   @override
@@ -161,19 +160,6 @@ class _SalesSidebar extends StatelessWidget {
             );
           }),
 
-          // Sales section label
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Sales section',
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.black38,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5)),
-            ),
-          ),
 
           const Spacer(),
           Container(
@@ -243,8 +229,6 @@ class _SalesBottomNav extends StatelessWidget {
             icon: Icon(Icons.bar_chart_rounded), label: 'Sales'),
         BottomNavigationBarItem(
             icon: Icon(Icons.people_rounded), label: 'Staff'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded), label: 'Settings'),
       ],
     );
   }
@@ -310,86 +294,7 @@ class _SalesTopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          // Search bar (decorative, matches screenshot)
-          Expanded(
-            child: Container(
-              height: 36,
-              constraints: const BoxConstraints(maxWidth: 340),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE0D8D0)),
-              ),
-              child: const Row(
-                children: [
-                  SizedBox(width: 10),
-                  Icon(Icons.search, size: 16, color: Colors.black38),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.black87),
-                      decoration: InputDecoration(
-                        hintText: 'Search orders, customers, menu items...',
-                        hintStyle: TextStyle(
-                            fontSize: 12, color: Colors.black38),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Today date chip
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE0D8D0)),
-            ),
-            child: Row(
-              children: [
-                const Text('Today',
-                    style: TextStyle(fontSize: 12, color: Colors.black54)),
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down,
-                    size: 14, color: Colors.black38),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Notification bell
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_outlined,
-                  size: 22, color: Colors.black54),
-              Positioned(
-                top: -4,
-                right: -4,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: const BoxDecoration(
-                      color: Color(0xFFE53935), shape: BoxShape.circle),
-                  child: const Center(
-                      child: Text('0',
-                          style: TextStyle(
-                              color: Colors.white, fontSize: 8))),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-
+          const Spacer(),
           // User
           PopupMenuButton<String>(
             onSelected: (v) {
